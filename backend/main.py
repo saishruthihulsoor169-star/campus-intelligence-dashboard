@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from servers.library_server import search_book, get_all_books
 from servers.cafeteria_server import get_menu_by_day, get_timings
 from servers.events_server import get_all_events, get_events_by_category, search_event
+from fastapi import Query
+from servers.academic_server import attendance_calculator
 
 app = FastAPI(title="Campus Intelligence Dashboard")
 
@@ -50,6 +52,15 @@ def events_by_category(category: str):
 @app.get("/events/search")
 def events_search(query: str):
     return search_event(query)
+
 @app.get("/ask")
 def ask(question: str):
     return ask_campus_ai(question)
+
+@app.get("/attendance")
+def calculate_attendance(
+    attended: int,
+    total: int,
+    target: int = 75
+):
+    return attendance_calculator(attended, total, target)
