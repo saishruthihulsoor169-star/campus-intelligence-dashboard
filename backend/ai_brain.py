@@ -184,6 +184,17 @@ tools = [
         }
     }
     },
+    {
+    "type": "function",
+    "function": {
+        "name": "get_all_books",
+        "description": "Get all books available in library",
+        "parameters": {
+            "type": "object",
+            "properties": {}
+        }
+    }
+}
 ]
 
 
@@ -210,6 +221,7 @@ function_map = {
     "get_company_package": lambda args: get_company_package(
           args["company"]
     ),
+    "get_all_books": lambda args: get_all_books(),
 
 }
 
@@ -240,28 +252,44 @@ def ask_campus_ai(question: str):
 
     # If AI wants to call a tool
     if response_message.tool_calls:
-        tool_call = response_message.tool_calls[0]
-        function_name = tool_call.function.name
-        function_args = json.loads(tool_call.function.arguments)
+     tool_call = response_message.tool_calls[0]
+     function_name = tool_call.function.name
+
+     try:
+          function_args = json.loads(tool_call.function.arguments)
 
         # Actually call the function
-        tool_result = function_map[function_name](function_args)
+          tool_result = function_map[function_name](function_args)
 
-        # Send result back to AI for final answer
-        messages.append({"role": "assistant", "content": None, 
-                         "tool_calls": response_message.tool_calls})
-        messages.append({
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "content": json.dumps(tool_result)
-        })
+     except Exception as e:
+         return {
+            "question": question,
+            "tool_used": function_name,
+            "answer": f"Tool execution error: {str(e)}"
+        }
 
-        final_response = client.chat.completions.create(
+    # Send result back to AI
+    messages.append({
+        "role": "assistant",
+        "content": None,
+        "tool_calls": response_message.tool_calls
+    })
+
+    messages.append({
+        "role": "tool",
+        "tool_call_id": tool_call.id,
+        "content": json.dumps(tool_result)
+    })
+   
+ 
+   
+
+    final_response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages
         )
 
-        return {
+    return {
             "question": question,
             "tool_used": function_name,
             "answer": final_response.choices[0].message.content
